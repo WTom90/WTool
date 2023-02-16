@@ -135,17 +135,17 @@ def message_draw(self, context):
 	row.label(text = message)
 
 
-def SyncMeshes():
+def SyncMeshes(scene):
 	global mod_self, cloned_objs
-	if bpy.context.scene.Wtool_Properties.IS_JoinObjects or not bpy.context.scene.Wtool_Properties.IS_AutoSync:
+	if scene.Wtool_Properties.IS_JoinObjects or not scene.Wtool_Properties.IS_AutoSync:
 		return
 	if mod_self:
 		return
 	mod_self = True
 	try:
 		bpy.ops.object.select_all(action='DESELECT')
-		bpy.context.view_layer.objects.active = bpy.context.scene.target
-		bpy.context.scene.target.select_set(True)
+		bpy.context.view_layer.objects.active = scene.target
+		scene.target.select_set(True)
 		bpy.ops.object.make_single_user(type='SELECTED_OBJECTS', object=True, obdata=True, material=True, animation=True)
 		bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
 		print(len(cloned_objs))
@@ -155,17 +155,17 @@ def SyncMeshes():
 		bpy.ops.object.make_links_data(type='OBDATA')
 		bpy.ops.object.make_links_data(type='MODIFIERS')
 		bpy.ops.object.select_all(action='DESELECT')
-		bpy.context.scene.target.select_set(True)
+		scene.target.select_set(True)
 	except Exception as ex:
 		print(ex)
 	mod_self = False
 
 
 
-	
+mod_counter = 0	
 def selection_change_handler(scene):
-	global mod_self
-	if bpy.context.scene.Wtool_Properties.IS_JoinObjects or not bpy.context.scene.Wtool_Properties.IS_AutoSync:
+	global mod_self, mod_counter
+	if scene.Wtool_Properties.IS_JoinObjects or not scene.Wtool_Properties.IS_AutoSync:
 		return
 		
 	if bpy.context.mode != "OBJECT":
@@ -178,9 +178,14 @@ def selection_change_handler(scene):
 			continue
 		if selection_change_handler.operator == bpy.context.active_operator and bpy.context.active_operator.name != "Add Modifier" and bpy.context.active_operator.name != "Remove Modifier" and bpy.context.active_operator.name != "editmode_toggle":
 			continue
-		
-		if not mod_self and update.id.name == bpy.context.scene.target.name: 
-			SyncMeshes()
+		if bpy.context.active_operator.name == "Add Modifier" or bpy.context.active_operator.name == "Remove Modifier":
+			if mod_counter > 3:
+				continue
+			mod_counter +=1
+		elif mod_counter > 3 :
+			mod_counter =0
+		if not mod_self and update.id.name == scene.target.name: 
+			SyncMeshes(scene)
 		selection_change_handler.operator = None
 	
 
@@ -445,8 +450,7 @@ class OBJECT_OT_WTool_Helper(bpy.types.Operator):
 						cloned_objs.append(new_obj)
 						
 		
-		
-		SyncMeshes()			
+			#SyncMeshes(scn)			
 		if scn.Wtool_Properties.PlaceOptions == 'OP4' and scn.target is not None:
 			C = bpy.context
 			
